@@ -42,6 +42,7 @@ class PolicyIteration(AbstractAgent):
         self.env = env
         self.seed = seed
         self.filename = filename
+        rng = np.random.default_rng()
         # rng = np.random.default_rng(
         #    seed=self.seed
         # )  # Uncomment and use this line if you need a random seed for reproducibility
@@ -63,10 +64,7 @@ class PolicyIteration(AbstractAgent):
         self.nA = self.A.shape[0]
 
         # TODO: Initialize policy and Q-values
-        try:
-            self.pi = rng.integers(self.nA, size=self.nS)
-        except NameError:
-            self.pi = np.random.randint(self.nA, size=self.nS)
+        self.pi = rng.integers(self.nA, size=self.nS)
 
         self.Q = np.zeros((self.nS, self.nA))
         self.policy_fitted: bool = False
