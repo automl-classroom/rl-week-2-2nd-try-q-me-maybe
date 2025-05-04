@@ -68,6 +68,7 @@ class MarsRover(gym.Env):
 
         # spaces
         n = self.P.shape[0]
+        print("Number of States:", n)
         self.observation_space = gym.spaces.Discrete(n)
         self.action_space = gym.spaces.Discrete(2)
 

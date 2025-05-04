@@ -52,16 +52,19 @@ class PolicyIteration(AbstractAgent):
         self.n_actions = self.env.action_space.n  # type: ignore[attr-defined]
 
         # TODO: Get the MDP components (states, actions, transitions, rewards)
-        self.S = None
-        self.A = None
-        self.T = None
-        self.R = None
+        self.S = env.states
+        self.A = env.actions
+        self.T = env.transition_matrix
+        self.R = env.rewards
         self.gamma = gamma
-        self.R_sa = None
+        self.R_sa = env.get_reward_per_action()
+
+        self.nS = self.S.shape[0]
+        self.nA = self.A.shape[0]
 
         # TODO: Initialize policy and Q-values
-        self.pi = None
-        self.Q = None
+        self.pi = np.random.randint(self.nA, size=self.nS)
+        self.Q = np.zeros((self.nS, self.nA))
 
         self.policy_fitted: bool = False
         self.steps: int = 0
@@ -87,7 +90,7 @@ class PolicyIteration(AbstractAgent):
             The selected action and an empty info dictionary.
         """
         # TODO: Return the action according to current policy
-        raise NotImplementedError("predict_action() is not implemented.")
+        return self.pi[observation], {}
 
     def update_agent(self, *args: tuple, **kwargs: dict) -> None:
         """Run policy iteration to compute the optimal policy and state-action values."""
@@ -154,8 +157,25 @@ def policy_evaluation(
     """
     nS = R_sa.shape[0]
     V = np.zeros(nS)
-
+    # print(nS)
+    # print(pi)
     # TODO: imüplement Poolicy Evaluation for all states
+    while True:
+        delta = 0
+        V_new = np.zeros(V.shape)
+
+        for s in range(nS):
+            a = pi[s]  # Action that is prescribed by the policy pi in state s
+            V_new[s] = R_sa[s, a] + gamma * np.sum(
+                T[s, a] * V
+            )  # Calculate the state-action value for current state s and policy pi
+            delta = max(
+                delta, abs(V_new[s] - V[s])
+            )  # Get the worst improvement of one of the iterations
+
+        V = V_new
+        if delta < epsilon:
+            break
 
     return V
 
@@ -186,6 +206,7 @@ def policy_improvement(
         Q-function and the improved policy.
     """
     nS, nA = R_sa.shape
+
     Q = np.zeros((nS, nA))
     pi_new = None
     # TODO: imüplement Poolicy Evaluation for all states
