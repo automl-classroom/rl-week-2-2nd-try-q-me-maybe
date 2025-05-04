@@ -63,9 +63,12 @@ class PolicyIteration(AbstractAgent):
         self.nA = self.A.shape[0]
 
         # TODO: Initialize policy and Q-values
-        self.pi = np.random.randint(self.nA, size=self.nS)
-        self.Q = np.zeros((self.nS, self.nA))
+        try:
+            self.pi = rng.integers(self.nA, size=self.nS)
+        except NameError:
+            self.pi = np.random.randint(self.nA, size=self.nS)
 
+        self.Q = np.zeros((self.nS, self.nA))
         self.policy_fitted: bool = False
         self.steps: int = 0
 
@@ -96,7 +99,9 @@ class PolicyIteration(AbstractAgent):
         """Run policy iteration to compute the optimal policy and state-action values."""
         if not self.policy_fitted:
             # TODO: Call policy iteration with initialized values
-            raise NotImplementedError("update_agent() is not implemented.")
+            self.Q, self.pi, _ = policy_iteration(
+                self.Q, self.pi, (self.S, self.A, self.T, self.R_sa, self.gamma)
+            )
             self.policy_fitted = True
 
     def save(self, *args: tuple[Any], **kwargs: dict) -> None:
@@ -157,9 +162,7 @@ def policy_evaluation(
     """
     nS = R_sa.shape[0]
     V = np.zeros(nS)
-    # print(nS)
-    # print(pi)
-    # TODO: imüplement Poolicy Evaluation for all states
+    # TODO: implement Policy Evaluation for all states
     while True:
         delta = 0
         V_new = np.zeros(V.shape)
@@ -209,7 +212,13 @@ def policy_improvement(
 
     Q = np.zeros((nS, nA))
     pi_new = None
-    # TODO: imüplement Poolicy Evaluation for all states
+    # TODO: implement Policy Improvement for all states
+
+    for s in range(nS):
+        for a in range(nA):
+            Q[s, a] = R_sa[s, a] + gamma * np.sum(T[s, a, :] * V)
+
+    pi_new = np.argmax(Q, axis=1)
 
     return Q, pi_new
 
@@ -242,6 +251,22 @@ def policy_iteration(
     S, A, T, R_sa, gamma = MDP
 
     # TODO: Combine evaluation and improvement in a loop.
+    i = 0
+    pi_new = pi.copy()
+
+    while i == 0 or np.linalg.norm(pi_new - pi, ord=1) > 0:
+        if i != 0:
+            pi = pi_new.copy()
+        V = policy_evaluation(pi, T, R_sa, gamma)
+        Q, pi_new = policy_improvement(V, T, R_sa, gamma)
+
+        print(f"Step {i}: pi={pi}, pi_new={pi_new}")
+        print(f"V = {V.round(2)}")
+
+        i = i + 1
+
+    print(f"Q: {Q}, pi: {pi_new}, i: {i}")
+    return Q, pi_new, i
 
 
 if __name__ == "__main__":
