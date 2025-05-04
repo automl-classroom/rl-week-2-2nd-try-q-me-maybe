@@ -42,6 +42,7 @@ class PolicyIteration(AbstractAgent):
         self.env = env
         self.seed = seed
         self.filename = filename
+        rng = np.random.default_rng()
         # rng = np.random.default_rng(
         #    seed=self.seed
         # )  # Uncomment and use this line if you need a random seed for reproducibility
@@ -52,17 +53,20 @@ class PolicyIteration(AbstractAgent):
         self.n_actions = self.env.action_space.n  # type: ignore[attr-defined]
 
         # TODO: Get the MDP components (states, actions, transitions, rewards)
-        self.S = None
-        self.A = None
-        self.T = None
-        self.R = None
+        self.S = env.states
+        self.A = env.actions
+        self.T = env.transition_matrix
+        self.R = env.rewards
         self.gamma = gamma
-        self.R_sa = None
+        self.R_sa = env.get_reward_per_action()
+
+        self.nS = self.S.shape[0]
+        self.nA = self.A.shape[0]
 
         # TODO: Initialize policy and Q-values
-        self.pi = None
-        self.Q = None
+        self.pi = rng.integers(self.nA, size=self.nS)
 
+        self.Q = np.zeros((self.nS, self.nA))
         self.policy_fitted: bool = False
         self.steps: int = 0
 
@@ -87,13 +91,15 @@ class PolicyIteration(AbstractAgent):
             The selected action and an empty info dictionary.
         """
         # TODO: Return the action according to current policy
-        raise NotImplementedError("predict_action() is not implemented.")
+        return self.pi[observation], {}
 
     def update_agent(self, *args: tuple, **kwargs: dict) -> None:
         """Run policy iteration to compute the optimal policy and state-action values."""
         if not self.policy_fitted:
             # TODO: Call policy iteration with initialized values
-            raise NotImplementedError("update_agent() is not implemented.")
+            self.Q, self.pi, _ = policy_iteration(
+                self.Q, self.pi, (self.S, self.A, self.T, self.R_sa, self.gamma)
+            )
             self.policy_fitted = True
 
     def save(self, *args: tuple[Any], **kwargs: dict) -> None:
@@ -154,8 +160,23 @@ def policy_evaluation(
     """
     nS = R_sa.shape[0]
     V = np.zeros(nS)
+    # TODO: implement Policy Evaluation for all states
+    while True:
+        delta = 0
+        V_new = np.zeros(V.shape)
 
-    # TODO: imüplement Poolicy Evaluation for all states
+        for s in range(nS):
+            a = pi[s]  # Action that is prescribed by the policy pi in state s
+            V_new[s] = R_sa[s, a] + gamma * np.sum(
+                T[s, a] * V
+            )  # Calculate the state-action value for current state s and policy pi
+            delta = max(
+                delta, abs(V_new[s] - V[s])
+            )  # Get the worst improvement of one of the iterations
+
+        V = V_new
+        if delta < epsilon:
+            break
 
     return V
 
@@ -186,9 +207,16 @@ def policy_improvement(
         Q-function and the improved policy.
     """
     nS, nA = R_sa.shape
+
     Q = np.zeros((nS, nA))
     pi_new = None
-    # TODO: imüplement Poolicy Evaluation for all states
+    # TODO: implement Policy Improvement for all states
+
+    for s in range(nS):
+        for a in range(nA):
+            Q[s, a] = R_sa[s, a] + gamma * np.sum(T[s, a, :] * V)
+
+    pi_new = np.argmax(Q, axis=1)
 
     return Q, pi_new
 
@@ -221,6 +249,22 @@ def policy_iteration(
     S, A, T, R_sa, gamma = MDP
 
     # TODO: Combine evaluation and improvement in a loop.
+    i = 0
+    pi_new = pi.copy()
+
+    while i == 0 or np.linalg.norm(pi_new - pi, ord=1) > 0:
+        if i != 0:
+            pi = pi_new.copy()
+        V = policy_evaluation(pi, T, R_sa, gamma)
+        Q, pi_new = policy_improvement(V, T, R_sa, gamma)
+
+        print(f"Step {i}: pi={pi}, pi_new={pi_new}")
+        print(f"V = {V.round(2)}")
+
+        i = i + 1
+
+    print(f"Q: {Q}, pi: {pi_new}, i: {i}")
+    return Q, pi_new, i
 
 
 if __name__ == "__main__":

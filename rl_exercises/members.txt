@@ -1,0 +1,3 @@
+member 1: Levin Stanke
+member 2: Yousuf Amanuel
+member 3: David Jürgensmeier
